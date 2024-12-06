@@ -1,0 +1,5 @@
+BASE_URL=mongodb+srv://gugugmi1234:gugugmi1234@cluster0.1lshn.mongodb.net/serviciosadmindiciembre?retryWrites=true&w=majority
+FRONTEND_URL=http://192.168.1.64:5173/
+CLOUDINARY_CLOUD_NAME=gmiesquivel
+CLOUDINARY_API_KEY=566492945314211
+CLOUDINARY_API_SECRET=4xBBJlC99wz9jP1ii2TJr0-5aV4
