@@ -3,3 +3,11 @@ FRONTEND_URL=http://192.168.1.64:5173/
 CLOUDINARY_CLOUD_NAME=gmiesquivel
 CLOUDINARY_API_KEY=566492945314211
 CLOUDINARY_API_SECRET=4xBBJlC99wz9jP1ii2TJr0-5aV4
+
+
+este mensaje es de prueba para git
+git init
+git add .
+git commit -m "first commit"
+git remote add origin https://github.com/jhernandezesq/ServiciosApp_Backend.git
+git push
