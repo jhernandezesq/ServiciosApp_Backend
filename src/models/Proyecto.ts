@@ -1,13 +1,16 @@
-import mongoose, {Schema, Document, ObjectId} from "mongoose";
+import mongoose, {Schema, Document, PopulatedDoc, Types} from "mongoose";
 import { object } from "zod";
+import { IGaleriaType } from "./Galeria";
 
-const estatusSchema = {
-    ENPROCESO: 'EN_PROCESO',
-    COMPLETADO: 'COMPLETADO',
-    CANCELADO: 'CANCELADO'
-}
+const proyectoEstatus = {
+    ENPROCESO: 'En Proceso',
+    COMPLETADO: 'Completado',
+    CANCELADO: 'Cancelado'
+} as const 
 
-export type ProyectoType = Document & {
+export type proyectoEstatus = typeof proyectoEstatus[keyof typeof proyectoEstatus]
+
+export interface IProyectoType extends Document {
   orden: string;
   nombre: string;
   direccion: string;
@@ -34,9 +37,9 @@ export type ProyectoType = Document & {
   hora_sr: string;
   reporto_sr: string;
   reportopax_sr: string;
-  
   url: string;
-  prioridad: string;
+  prioridad: proyectoEstatus;
+  galerias: PopulatedDoc<IGaleriaType & Document>[]
 };
 
 
@@ -156,14 +159,20 @@ const proyectoSchema : Schema = new mongoose.Schema({
   prioridad: {
       type: String,
       required: true,
-      enum: Object.values(estatusSchema),
-      default: estatusSchema.ENPROCESO
-  }
+      enum: Object.values(proyectoEstatus),
+      default: proyectoEstatus.ENPROCESO
+  },
+  galerias: [
+    {
+        type: Types.ObjectId,
+        ref: 'Galeria'
+    }
+  ]
 },  {
   timestamps: true,
   }
 );
 
-const Proyecto = mongoose.model<ProyectoType>('Proyecto', proyectoSchema );
+const Proyecto = mongoose.model<IProyectoType>('Proyecto', proyectoSchema );
 
 export default Proyecto;
