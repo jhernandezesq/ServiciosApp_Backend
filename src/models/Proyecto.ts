@@ -1,6 +1,7 @@
 import mongoose, {Schema, Document, PopulatedDoc, Types} from "mongoose";
 import { object } from "zod";
 import { IGaleriaType } from "./Galeria";
+import { IUsuario } from "./Usuario";
 
 const proyectoEstatus = {
     ENPROCESO: 'En Proceso',
@@ -11,7 +12,7 @@ const proyectoEstatus = {
 export type proyectoEstatus = typeof proyectoEstatus[keyof typeof proyectoEstatus]
 
 export interface IProyectoType extends Document {
-  orden: string;
+  orden: number;
   nombre: string;
   direccion: string;
   numero: string;
@@ -40,12 +41,13 @@ export interface IProyectoType extends Document {
   url: string;
   prioridad: proyectoEstatus;
   galerias: PopulatedDoc<IGaleriaType & Document>[]
+  manager: PopulatedDoc<IUsuario & Document >
 };
 
 
 const proyectoSchema : Schema = new mongoose.Schema({
   orden: {
-      type: String,
+      type: Number,
       trim: true,
       required: true
   },
@@ -167,7 +169,11 @@ const proyectoSchema : Schema = new mongoose.Schema({
         type: Types.ObjectId,
         ref: 'Galeria'
     }
-  ]
+  ],
+  manager: {
+    type: Types.ObjectId,
+    ref: 'Usuario'
+  }
 },  {
   timestamps: true,
   }

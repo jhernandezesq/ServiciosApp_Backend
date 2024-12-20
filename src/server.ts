@@ -3,6 +3,7 @@ import dotenv from 'dotenv'
 import cors from 'cors'
 import { conectarDB } from './config/db'
 
+import authRoute from './routes/authRoutes'
 import proyectoRoute from './routes/proyectoRoutes'
 
 
@@ -17,9 +18,10 @@ app.use(express.json())
 
 //ROUTES
 
+app.use('/api/auth', authRoute)
 app.use('/api/proyectos', proyectoRoute)
 
-console.log('Cloudinary Config Loaded:', process.env.CLOUDINARY_API_KEY, process.env.CLOUDINARY_API_SECRET);
+//console.log('Cloudinary Config Loaded:', process.env.CLOUDINARY_API_KEY, process.env.CLOUDINARY_API_SECRET);
 
 
 export default app

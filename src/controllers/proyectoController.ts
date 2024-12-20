@@ -4,64 +4,83 @@ import cloudinary from "../config/cloudinaryConfig";
 import { IGaleriaType } from "../models/Galeria";
 import { GaleriaController } from "./galeriaController";
 
+
+
 export class ProyectoController {
   // Crear un nuevo proyecto
   static crearProyecto = async (req: Request, res: Response): Promise<void> => {
     try {
-      const nuevoProyecto = new Proyecto(req.body); // Usar directamente req.body
-      const proyectoGuardado = await nuevoProyecto.save();
-      res.status(201).json({
-        message: "Proyecto creado con éxito",
-        proyecto: proyectoGuardado,
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({
-        message: "Error al crear el proyecto",
-        error: error.message || error,
-      });
-    }
-  };
+        // Crear la nueva instancia de Proyecto con los datos del body de la solicitud
+        const nuevoProyecto = new Proyecto(req.body);
 
-  static obtenerProyectosPage = async (req: Request, res: Response): Promise<void> => {
-    try {
-      // Obtener los parámetros 'page' y 'limit' desde la query string
-      const page = parseInt(req.query.page as string) || 1;  // Si no se pasa 'page', se usa 1 por defecto
-      const limit = parseInt(req.query.limit as string) || 10;  // Si no se pasa 'limit', se usa 10 por defecto
-  
-      // Calcular el número de registros a saltar (skip) para la paginación
-      const skip = (page - 1) * limit;
-  
-      // Obtener los proyectos de la base de datos con paginación y ordenación descendente
-      const proyectos = await Proyecto.find({})
-        .skip(skip)
-        .limit(limit)
-        .sort({ orden: -1 }) // Ordenar por 'orden' de manera descendente (más reciente primero)
-        .populate({
-          path: "galerias",
-          select: "-createdAt -updatedAt -__v",  // Excluir estos campos de 'galerias'
+        // Asignar el ID del usuario que realiza la solicitud como el manager del proyecto
+        nuevoProyecto.manager = req.usuario.id;
+
+        // Guardar el proyecto en la base de datos
+        const proyectoGuardado = await nuevoProyecto.save();
+
+        // Enviar la respuesta exitosa
+        res.status(201).json({
+            message: "Proyecto creado con éxito",
+            proyecto: proyectoGuardado,
         });
-  
-      // Contar el total de proyectos en la base de datos
-      const totalProyectos = await Proyecto.countDocuments();
-  
-      // Calcular el total de páginas disponibles
-      const totalPages = Math.ceil(totalProyectos / limit);
-  
-      res.status(200).json({
-        proyectos,        // Los proyectos obtenidos para la página solicitada
-        currentPage: page,  // Página actual
-        totalPages,         // Total de páginas
-        totalProyectos,     // Total de proyectos disponibles
-      });
     } catch (error) {
-      console.error("Error al obtener los proyectos paginados:", error);
-      res.status(500).json({
-        message: "Error al obtener los proyectos",
-        error: error.message || error,
-      });
+        // Manejo de errores
+        console.error(error);
+        res.status(500).json({
+            message: "Error al crear el proyecto",
+            error: error.message || error,
+        });
     }
+};
+
+
+static obtenerProyectosPage = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Obtener los parámetros 'page' y 'limit' desde la query string
+    const page = parseInt(req.query.page as string) || 1;  // Si no se pasa 'page', se usa 1 por defecto
+    const limit = parseInt(req.query.limit as string) || 10;  // Si no se pasa 'limit', se usa 10 por defecto
+
+    // Calcular el número de registros a saltar (skip) para la paginación
+    const skip = (page - 1) * limit;
+
+    // Obtener los proyectos de la base de datos con paginación y ordenación descendente
+    const proyectos = await Proyecto.find({
+      $or: [
+        {manager: {$in: req.usuario.id}} // Filtrar por proyectos asociados al usuario
+      ]
+    })
+      .skip(skip)
+      .limit(limit)
+      .sort({ orden: -1 }) // Ordenar por 'orden' de manera descendente (más reciente primero)
+      .populate({
+        path: "galerias",
+        select: "-createdAt -updatedAt -__v",  // Excluir estos campos de 'galerias'
+      });
+
+    // Contar el total de proyectos en la base de datos
+    const totalProyectos = await Proyecto.countDocuments({
+      manager: { $in: req.usuario.id } // Contar solo los proyectos del usuario
+    });
+
+    // Calcular el total de páginas disponibles (asegurarse de que no sea 0)
+    const totalPages = Math.max(1, Math.ceil(totalProyectos / limit));
+
+    res.status(200).json({
+      proyectos,        // Los proyectos obtenidos para la página solicitada
+      currentPage: page,  // Página actual
+      totalPages,         // Total de páginas (asegurado mínimo de 1)
+      totalProyectos,     // Total de proyectos disponibles
+    });
+  } catch (error) {
+    console.error("Error al obtener los proyectos paginados:", error);
+    res.status(500).json({
+      message: "Error al obtener los proyectos",
+      error: error.message || error,
+    });
   }
+}
+
   
 
   // Obtener todos los proyectos
@@ -99,9 +118,17 @@ export class ProyectoController {
         
 
       if (!proyecto) {
-        res.status(404).json({ message: "Proyecto No Encontrado" });
+        const error = new Error('Proyecto No encontrado')
+        res.status(404).json({ error: error.message });
         return;
       }
+
+      if (proyecto.manager.toString() !== req.usuario.id.toString()) {
+        const error = new Error('Accion no valida')
+        res.status(404).json({ error: error.message });
+        return;
+      }
+
       res.status(200).json(proyecto);
     } catch (error) {
       console.error("Error al obtener el proyecto: ", error);
@@ -120,8 +147,16 @@ export class ProyectoController {
     try {
       const { id } = req.params;
       const proyecto = await Proyecto.findById(id);
+      
       if (!proyecto) {
-        res.status(404).json({ message: "Proyecto no encontrado" });
+        const error = new Error('Proyecto No encontrado')
+        res.status(404).json({ error: error.message });
+        return;
+      }
+
+      if (proyecto.manager.toString() !== req.usuario.id.toString()) {
+        const error = new Error('Solo la cuenta que creeo el proyecto puede editarla')
+        res.status(404).json({ error: error.message });
         return;
       }
 
@@ -158,7 +193,14 @@ export class ProyectoController {
         .populate<{ galerias: IGaleriaType[] }>('galerias');  // Aquí indicamos explícitamente que galerias es un array de IGaleriaType
   
       if (!proyecto) {
-        res.status(404).json({ message: "Proyecto No Encontrado" });
+        const error = new Error('Proyecto No encontrado')
+        res.status(404).json({ error: error.message });
+        return;
+      }
+
+      if (proyecto.manager.toString() !== req.usuario.id.toString()) {
+        const error = new Error('solo el que creeo el proyecto puede eliminarlo')
+        res.status(404).json({ error: error.message });
         return;
       }
   
